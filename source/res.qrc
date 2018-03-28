@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>ok-512.png</file>
+        <file>icon.png</file>
+        <file>key.png</file>
+    </qresource>
+</RCC>
