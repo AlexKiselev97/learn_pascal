@@ -15,6 +15,7 @@
 #include <QTextCodec>
 #include <QDesktopWidget>
 #include <QTimer>
+#include <QDesktopServices>
 #include <memory>
 
 void MainWindow::taskLoad()
@@ -477,9 +478,14 @@ void MainWindow::on_programEdit_textChanged()
     }
 }
 
-void MainWindow::on_action_triggered()
+void MainWindow::on_action_about_triggered()
 {
     AboutDialog dialog;
     dialog.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
     dialog.exec();
+}
+
+void MainWindow::on_action_help_triggered()
+{
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QDir::currentPath() + "/help.chm"));
 }

@@ -56,7 +56,9 @@ private slots:
 
     void on_programEdit_textChanged();
 
-    void on_action_triggered();
+    void on_action_about_triggered();
+
+    void on_action_help_triggered();
 
 private:
     Ui::MainWindow *ui;

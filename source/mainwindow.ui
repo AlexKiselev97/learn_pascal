@@ -421,7 +421,7 @@
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-224</y>
+             <y>0</y>
              <width>751</width>
              <height>1134</height>
             </rect>
@@ -660,7 +660,6 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>Меню</string>
     </property>
-    <addaction name="action_2"/>
     <addaction name="action_manager"/>
     <addaction name="separator"/>
     <addaction name="action_exit"/>
@@ -676,7 +675,8 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>Справка</string>
     </property>
-    <addaction name="action"/>
+    <addaction name="action_about"/>
+    <addaction name="action_help"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -731,14 +731,14 @@ p, li { white-space: pre-wrap; }
     <string>Менеджер задач</string>
    </property>
   </action>
-  <action name="action_2">
-   <property name="text">
-    <string>Справочник</string>
-   </property>
-  </action>
-  <action name="action">
+  <action name="action_about">
    <property name="text">
     <string>О программе</string>
+   </property>
+  </action>
+  <action name="action_help">
+   <property name="text">
+    <string>Просмотреть справку</string>
    </property>
   </action>
  </widget>
