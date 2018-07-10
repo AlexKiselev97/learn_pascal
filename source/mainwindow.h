@@ -27,7 +27,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     bool login();
     bool getSuccessLogin() { return successLogin; }
-    void taskLoad();
+    void loadTaskTree();
     void init();
     ~MainWindow();
 
@@ -43,8 +43,6 @@ private slots:
     void on_compileButton_clicked();
 
     void on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);
-
-    void on_action_profile_triggered();
 
     void on_action_openProfile_triggered();
 
@@ -66,7 +64,7 @@ private:
     bool taskLoaded = false;
     TaskFromDB task;
     Profile profile;
-    void updateTaskProfile();
+    void loadProfileTasks();
     void highlightString(int str);
     bool hightlighted;
     std::unique_ptr<QProcess> proc;

@@ -41,13 +41,12 @@ void ProfileForm::closeEvent(QCloseEvent *event)
 
 void ProfileForm::setProfile(const Profile& p, QTreeWidget* twp)
 {
-    taskReload = false;
     profileWasChanged = false;
-    ui->treeWidget->clear();
     ui->loginEdit->setText(p.name);
     adminProfileName = p.name;
     ui->statusEdit->setText(p.administrator ? "Администратор" : "Пользователь");
-    this->tasksProfile = p.tasks;
+    this->profileTasks = p.tasks;
+    ui->treeWidget->clear();
     for (int i = 0; i < twp->topLevelItemCount(); ++i)
     {
        QTreeWidgetItem* item = twp->topLevelItem(i);
@@ -64,14 +63,11 @@ void ProfileForm::setProfile(const Profile& p, QTreeWidget* twp)
 void ProfileForm::on_openProfileButton_clicked()
 {
     askSaveProfile();
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
     QStringList loginList;
-    if (db.open())
+    if (db.isOpen())
     {
-        QString q = "SELECT users.[login] FROM users;";
+        QString q = "SELECT login FROM users;";
         QSqlQuery query(db);
         if (!query.exec(q))
             qDebug() << query.lastError().text() << "\n";
@@ -90,12 +86,12 @@ void ProfileForm::on_openProfileButton_clicked()
     auto profileName = ofd.getProfileName();
     if (profileName == ui->loginEdit->text())
     {
-        msgBoxSimple("Упс", "Вы уже в этом профиле");
+        msgBoxSimple("Ошибки", "Вы уже в этом профиле");
     }
     else
     {
-        QString q = "SELECT users.[login], users.[admin], users.[tasks] FROM users "
-                    "WHERE ((users.[login])= \'" + profileName +"\');";
+        QString q = "SELECT login, admin, tasks FROM users "
+                    "WHERE login= \'" + profileName +"\';";
         QSqlQuery query(db);
         if (!query.exec(q))
             qDebug() << query.lastError().text() << "\n";
@@ -105,18 +101,18 @@ void ProfileForm::on_openProfileButton_clicked()
             {
                 ui->loginEdit->setText(query.value(0).toString());
                 ui->statusEdit->setText(query.value(1).toBool() ? "Администратор" : "Пользователь");
-                tasksProfile = query.value(2).toString();
+                profileTasks = query.value(2).toString();
                 int count = 0;
                 for (int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i)
                 {
                    QTreeWidgetItem* item = ui->treeWidget->topLevelItem(i);
                    for (int j=0; j < item->childCount(); ++j)
                    {
-                       if(tasksProfile[count] == '0' && !item->child(j)->icon(0).isNull())
+                       if(profileTasks[count] == '0' && !item->child(j)->icon(0).isNull())
                        {
                            item->child(j)->setIcon(0, QIcon());
                        }
-                       else if(tasksProfile[count] == '1' && item->child(j)->icon(0).isNull())
+                       else if(profileTasks[count] == '1' && item->child(j)->icon(0).isNull())
                        {
                            item->child(j)->setIcon(0, QIcon(":/images/ok-512.png"));
                        }
@@ -131,7 +127,6 @@ void ProfileForm::on_openProfileButton_clicked()
             }
         }
     }
-    db.close();
 }
 
 void ProfileForm::on_changeTaskStatusButton_clicked()
@@ -140,23 +135,22 @@ void ProfileForm::on_changeTaskStatusButton_clicked()
     {
         if (ui->treeWidget->currentItem()->parent() != 0)
         {
-            if(!ui->treeWidget->currentItem()->icon(0).isNull())
-            {
-                ui->treeWidget->currentItem()->setIcon(0, QIcon());
-            }
-            else
+            if(ui->treeWidget->currentItem()->icon(0).isNull())
             {
                 ui->treeWidget->currentItem()->setIcon(0, QIcon(":/images/ok-512.png"));
             }
+            else
+            {
+                ui->treeWidget->currentItem()->setIcon(0, QIcon());
+            }
             profileWasChanged = true;
-            taskReload = true;
         }
     }
 }
 
 void ProfileForm::on_saveProfile_clicked()
 {
-    tasksProfile = "";
+    profileTasks = "";
     for (int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i)
     {
        QTreeWidgetItem* item = ui->treeWidget->topLevelItem(i);
@@ -164,24 +158,20 @@ void ProfileForm::on_saveProfile_clicked()
        {
            if(item->child(j)->icon(0).isNull())
            {
-               tasksProfile.push_back('0');
+               profileTasks.push_back('0');
            }
            else
-               tasksProfile.push_back('1');
+               profileTasks.push_back('1');
        }
     }
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString q = "UPDATE users SET users.tasks = \'" + this->tasksProfile + "\' "
-                    "WHERE (((users.login)=\'" + ui->loginEdit->text() + "\'));";
+        QString q = "UPDATE users SET tasks = \'" + this->profileTasks + "\' "
+                    "WHERE login=\'" + ui->loginEdit->text() + "\';";
         QSqlQuery query(db);
         if (!query.exec(q))
             qDebug() << query.lastError().text() << "\n";
-        db.close();
     }
     else
         qDebug() << db.lastError().text() << "\n";
@@ -203,69 +193,64 @@ void ProfileForm::on_createProfileButton_clicked()
 
 void ProfileForm::on_deleteProfileButton_clicked()
 {
-    if (adminProfileName != ui->loginEdit->text())
+    if (adminProfileName == ui->loginEdit->text())
     {
-        QString dbDir = QDir::currentPath() + "/db/users.mdb";
-        QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-        db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-        db.setPassword("1234admin56");
-        if (db.open())
-        {
-            auto ans = msgBoxQ("Подтвердите действие",
-                "Вы действительно хотите удалить пользователя под именем " + ui->loginEdit->text() + "?");
-            if (ans == QMessageBox::Yes)
+        msgBoxSimple("Ошибка", "Вы не можете удалить сами себя. Откройте другой профиль.");
+        return;
+    }
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (!db.isOpen())
+    {
+        return;
+    }
+    auto ans = msgBoxQ("Подтвердите действие",
+        "Вы действительно хотите удалить пользователя под именем " + ui->loginEdit->text() + "?");
+    if (ans == QMessageBox::Yes)
+    {
+        QString q = "DELETE FROM users "
+            "WHERE login=\'" + ui->loginEdit->text() + "\';";
+        QSqlQuery query(db);
+        if (!query.exec(q))
+            qDebug() << query.lastError().text() << "\n";
+        else
+        { // загрузка профиля админа
+            QString q = "SELECT login, admin, tasks FROM users "
+                        "WHERE login= \'" + adminProfileName +"\';";
+            QSqlQuery query(db);
+            if (!query.exec(q))
+                qDebug() << query.lastError().text() << "\n";
+            else
             {
-                QString q = "DELETE FROM users "
-                    "WHERE login=\'" + ui->loginEdit->text() + "\';";
-                QSqlQuery query(db);
-                if (!query.exec(q))
-                    qDebug() << query.lastError().text() << "\n";
-                else
+                if (query.next())
                 {
-                    QString q = "SELECT users.[login], users.[admin], users.[tasks] FROM users "
-                                "WHERE ((users.[login])= \'" + adminProfileName +"\');";
-                    QSqlQuery query(db);
-                    if (!query.exec(q))
-                        qDebug() << query.lastError().text() << "\n";
-                    else
+                    ui->loginEdit->setText(query.value(0).toString());
+                    ui->statusEdit->setText(query.value(1).toBool() ? "Администратор" : "Пользователь");
+                    profileTasks = query.value(2).toString();
+                    int count = 0;
+                    for (int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i)
                     {
-                        if (query.next())
-                        {
-                            ui->loginEdit->setText(query.value(0).toString());
-                            ui->statusEdit->setText(query.value(1).toBool() ? "Администратор" : "Пользователь");
-                            tasksProfile = query.value(2).toString();
-                            int count = 0;
-                            for (int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i)
-                            {
-                               QTreeWidgetItem* item = ui->treeWidget->topLevelItem(i);
-                               for (int j=0; j < item->childCount(); ++j)
-                               {
-                                   if(tasksProfile[count] == '0' && !item->child(j)->icon(0).isNull())
-                                   {
-                                       item->child(j)->setIcon(0, QIcon());
-                                   }
-                                   else if(tasksProfile[count] == '1' && item->child(j)->icon(0).isNull())
-                                   {
-                                       item->child(j)->setIcon(0, QIcon(":/images/ok-512.png"));
-                                   }
-                                   ++count;
-                               }
-                            }
-                        }
-                        else
-                        {
-                            msgBoxSimple("Ошибка", "Не найдена запись профиля " + ui->loginEdit->text() + ".");
-                        }
+                       QTreeWidgetItem* item = ui->treeWidget->topLevelItem(i);
+                       for (int j=0; j < item->childCount(); ++j)
+                       {
+                           if(profileTasks[count] == '0' && !item->child(j)->icon(0).isNull())
+                           {
+                               item->child(j)->setIcon(0, QIcon());
+                           }
+                           else if(profileTasks[count] == '1' && item->child(j)->icon(0).isNull())
+                           {
+                               item->child(j)->setIcon(0, QIcon(":/images/ok-512.png"));
+                           }
+                           ++count;
+                       }
                     }
                 }
+                else
+                {
+                    msgBoxSimple("Ошибка", "Не найдена запись профиля " + ui->loginEdit->text() + ".");
+                }
             }
-            db.close();
         }
-        else
-            qDebug() << db.lastError().text() << "\n";
     }
-    else
-        msgBoxSimple("Ошибка", "Вы не можете удалить сами себя. Откройте другой профиль.");
 }
 
 void ProfileForm::on_changePassButton_clicked()
@@ -274,6 +259,4 @@ void ProfileForm::on_changePassButton_clicked()
     dialog.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
     dialog.setName(this->ui->loginEdit->text());
     dialog.exec();
-    if (dialog.passChange)
-        msgBoxSimple("Уведомление", "Пароль изменен.");
 }

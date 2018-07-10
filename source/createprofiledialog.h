@@ -26,7 +26,7 @@ private slots:
 
 private:
     Ui::CreateProfileDialog *ui;
-    int taskCount;
+    int taskAmount;
 };
 
 #endif // CREATEPROFILEDIALOG_H

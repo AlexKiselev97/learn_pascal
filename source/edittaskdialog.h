@@ -19,13 +19,15 @@ class EditTaskDialog : public QDialog
 
 public:
     explicit EditTaskDialog(QWidget *parent = 0);
-    void setTaskName(QString name);
+    void setTask(QString name);
     ~EditTaskDialog();
 
 private slots:
     void on_openButton_clicked();
 
     void on_saveButton_clicked();
+
+    void on_saveHtmlButton_clicked();
 
 private:
     Ui::EditTaskDialog *ui;

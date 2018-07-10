@@ -7,6 +7,7 @@
 #include "ui_setnewpassdialog.h"
 #include "header.h"
 #include <QTime>
+#include <QCryptographicHash>
 
 SetNewPassDialog::SetNewPassDialog(QWidget *parent) :
     QDialog(parent),
@@ -36,19 +37,24 @@ void SetNewPassDialog::setName(const QString& str)
 
 void SetNewPassDialog::on_setNewPassButton_clicked()
 {
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString q = "UPDATE users SET users.password = \'" + ui->passEdit->text() + "\' "
-                    "WHERE (((users.login)=\'" + profileName + "\'));";
+        auto saltyPass = ui->passEdit->text() + profileName;
+        QString q = "UPDATE users SET password = \'"
+                    + QCryptographicHash::hash(saltyPass.toLocal8Bit(), QCryptographicHash::Algorithm::Sha256).toHex() + "\' "
+                    "WHERE login=\'" + profileName + "\';";
         QSqlQuery query(db);
-        if (!query.exec(q))
-            qDebug() << query.lastError().text() << "\n";
-        db.close();
-        this->passChange = true;
-        this->close();
+        if (query.exec(q))
+        {
+            msgBoxSimple("Успех", "Пароль изменен");
+            this->passChanged = true;
+            this->close();
+        }
+        else
+        {
+            qDebug() << query.lastError().text();
+            msgBoxSimple("Ошибка", "Не удалось изменить пароль");
+        }
     }
 }

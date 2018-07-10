@@ -19,7 +19,7 @@ class TasksDialog : public QDialog
 
 public:
     explicit TasksDialog(QWidget *parent = 0);
-    void setTask(QTreeWidget* twp);
+    void setTaskTree(QTreeWidget* twp);
     ~TasksDialog();
 
 protected:
@@ -47,7 +47,7 @@ private slots:
 private:
     Ui::TasksDialog *ui;
     void addEmptyTaskToAllProfiles(int pos);
-    void deleteTaskToAllProfiles(int pos);
+    void deleteTaskFromAllProfiles(int pos);
     void deleteTask(QTreeWidgetItem* item);
     int numberOfTask(QTreeWidgetItem* item);
     void moveTask(int pos, QString side);

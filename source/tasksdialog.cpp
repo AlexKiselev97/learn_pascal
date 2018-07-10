@@ -15,7 +15,7 @@ TasksDialog::TasksDialog(QWidget *parent) :
     ui->setupUi(this);
 }
 
-void TasksDialog::setTask(QTreeWidget *twp)
+void TasksDialog::setTaskTree(QTreeWidget *twp)
 {
     for (int i = 0; i < twp->topLevelItemCount(); ++i)
     {
@@ -41,24 +41,22 @@ TasksDialog::~TasksDialog()
 
 void TasksDialog::saveTree()
 {
-    QString dbDir = QDir::currentPath() + "/db/taskTree.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
         QSqlQuery query(db);
-        QString qDrop = "DROP TABLE table1';";
-        if (!query.exec(qDrop))
-            qDebug() << query.lastError().text() << "\n";
-        QString qCreate = "CREATE TABLE table1 (Код COUNTER PRIMARY KEY, Чей_ребенок INT, Название TEXT);";
+        QString qCreate = "CREATE TABLE newTaskTree ("
+                          "Код INTEGER NOT NULL AUTO_INCREMENT, "
+                          "Чей_ребенок INTEGER, "
+                          "Название VARBINARY(255), "
+                          "PRIMARY KEY (Код));";
         if (!query.exec(qCreate))
             qDebug() << query.lastError().text() << "\n";
         int count = 0;
         for (int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i)
         {
             ++count;
-            QString qInsertParent = "INSERT INTO table1 ( Чей_ребенок, Название ) "
+            QString qInsertParent = "INSERT INTO newTaskTree ( Чей_ребенок, Название ) "
                               "VALUES (0, \'" + ui->treeWidget->topLevelItem(i)->text(0) + "\');";
             if (!query.exec(qInsertParent))
                 qDebug() << query.lastError().text() << "\n";
@@ -66,14 +64,20 @@ void TasksDialog::saveTree()
             for (int j = 0; j < ui->treeWidget->topLevelItem(i)->childCount(); ++j)
             {
                 ++count;
-                QString qInsertChild = "INSERT INTO table1 ( Чей_ребенок, Название ) "
+                QString qInsertChild = "INSERT INTO newTaskTree ( Чей_ребенок, Название ) "
                                   "VALUES (" + QString::number(parentNumber) + ", "
                                   "\'" + ui->treeWidget->topLevelItem(i)->child(j)->text(0) + "\');";
                 if (!query.exec(qInsertChild))
                     qDebug() << query.lastError().text() << "\n";
             }
         }
-        db.close();
+        QString qDrop = "DROP TABLE taskTree;";
+        if (!query.exec(qDrop))
+            qDebug() << query.lastError().text() << "\n";
+        QString qRename = "RENAME TABLE newTaskTree TO taskTree;";
+        if (!query.exec(qRename))
+            qDebug() << query.lastError().text() << "\n";
+
     }
 }
 
@@ -132,21 +136,18 @@ void TasksDialog::on_deleteSectionButton_clicked()
 
 void TasksDialog::deleteTask(QTreeWidgetItem* item)
 {
-    QString dbDir = QDir::currentPath() + "/db/task.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
         QSqlQuery query(db);
-        QString q = "DELETE * FROM table1 WHERE TaskName =\'" + item->text(0) + "\';";
+        QString q = "DELETE FROM task WHERE TaskName =\'" + item->text(0) + "\';";
         if (!query.exec(q))
             qDebug() << query.lastError().text() << "\n";
-        db.close();
+
+        deleteTaskFromAllProfiles(numberOfTask(item));
+        delete item;
+        saveTree();
     }
-    deleteTaskToAllProfiles(numberOfTask(item));
-    delete item;
-    saveTree();
 }
 
 void TasksDialog::on_deleteTaskButton_clicked()
@@ -165,11 +166,8 @@ void TasksDialog::on_deleteTaskButton_clicked()
 
 void TasksDialog::moveTask(int pos, QString side)
 {
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
         QSqlQuery query(db);
         QString qGetLoginAndTasks = "SELECT login, tasks FROM users;";
@@ -194,33 +192,29 @@ void TasksDialog::moveTask(int pos, QString side)
                     pair.second[pos] = pair.second[pos+1];
                     pair.second[pos+1] = temp;
                 }
-                QString qUpdateTask = "UPDATE users SET users.tasks = \'" + pair.second + "\' "
-                                      "WHERE (((users.login)=\'" + pair.first + "\'));";
+                QString qUpdateTask = "UPDATE users SET tasks = \'" + pair.second + "\' "
+                                      "WHERE login=\'" + pair.first + "\';";
                 query.exec(qUpdateTask);
             }
         }
-        db.close();
     }
 }
 
 void TasksDialog::moveSection(int pos, int len, int insertPos, QString side)
 {
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
         QSqlQuery query(db);
         QString qGetLoginAndTasks = "SELECT login, tasks FROM users;";
-        QList<QPair<QString, QString>> taskList;
+        QList<QPair<QString, QString>> usersList;
         if (!query.exec(qGetLoginAndTasks))
             qDebug() << query.lastError().text() << "\n";
         else
         {
             while (query.next())
-                taskList.push_back(qMakePair(query.value(0).toString(), query.value(1).toString()));
-            for (auto& pair: taskList)
+                usersList.push_back(qMakePair(query.value(0).toString(), query.value(1).toString()));
+            for (auto& pair: usersList)
             {
                 if (side == "up")
                 {
@@ -234,12 +228,11 @@ void TasksDialog::moveSection(int pos, int len, int insertPos, QString side)
                     pair.second.insert(insertPos+1, temp);
                     pair.second.remove(pos, len);
                 }
-                QString qUpdateTask = "UPDATE users SET users.tasks = \'" + pair.second + "\' "
-                                      "WHERE (((users.login)=\'" + pair.first + "\'));";
+                QString qUpdateTask = "UPDATE users SET tasks = \'" + pair.second + "\' "
+                                      "WHERE login=\'" + pair.first + "\';";
                 query.exec(qUpdateTask);
             }
         }
-        db.close();
     }
 }
 
@@ -248,7 +241,7 @@ void TasksDialog::on_upItemButton_clicked()
     if (ui->treeWidget->currentItem() == 0)
         return;
     if (ui->treeWidget->currentItem()->parent() == 0)
-    {
+    { // если раздел
         if (ui->treeWidget->currentIndex().row() > 0)
         {
             if (ui->treeWidget->currentItem()->childCount() > 0)
@@ -264,7 +257,7 @@ void TasksDialog::on_upItemButton_clicked()
         }
     }
     else
-    {
+    { // если задача
         if (ui->treeWidget->currentIndex().row() > 0)
         {
             moveTask(numberOfTask(ui->treeWidget->currentItem()), "up");
@@ -313,61 +306,53 @@ void TasksDialog::on_downItemButton_clicked()
 
 void TasksDialog::addEmptyTaskToAllProfiles(int pos)
 {
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString qAllTask = "SELECT users.login, users.tasks FROM users;";
+        QString qAllTask = "SELECT login, tasks FROM users;";
         QSqlQuery query(db);
-        std::vector<std::pair<QString, QString>> usersList;
+        QList<QPair<QString, QString>> usersList;
         if (!query.exec(qAllTask))
             qDebug() << query.lastError().text() << "\n";
         else
             while (query.next())
-                usersList.push_back(std::make_pair(query.value(0).toString(), query.value(1).toString()));
+                usersList.push_back(qMakePair(query.value(0).toString(), query.value(1).toString()));
         for (auto& pair: usersList)
         {
             qDebug() << "pair second b4 insert " << pair.second;
             pair.second.insert(pos, QChar('0'));
             qDebug() << "pair second after insert " << pair.second;
-            QString qUpdateTasks = "UPDATE users SET users.tasks = \'" + pair.second + "\' "
-                                   "WHERE (((users.login)=\'" + pair.first + "\'));";
+            QString qUpdateTasks = "UPDATE users SET tasks = \'" + pair.second + "\' "
+                                   "WHERE login=\'" + pair.first + "\';";
             if (!query.exec(qUpdateTasks))
                 qDebug() << query.lastError().text() << "\n";
         }
-        db.close();
     }
 }
 
-void TasksDialog::deleteTaskToAllProfiles(int pos)
+void TasksDialog::deleteTaskFromAllProfiles(int pos)
 {
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString qAllTask = "SELECT users.login, users.tasks FROM users;";
+        QString qAllTask = "SELECT login, tasks FROM users;";
         QSqlQuery query(db);
-        std::vector<std::pair<QString, QString>> usersList;
+        QList<QPair<QString, QString>> usersList;
         if (!query.exec(qAllTask))
             qDebug() << query.lastError().text() << "\n";
         else
             while (query.next())
-                usersList.push_back(std::make_pair(query.value(0).toString(), query.value(1).toString()));
+                usersList.push_back(qMakePair(query.value(0).toString(), query.value(1).toString()));
         for (auto& pair: usersList)
         {
             qDebug() << "pair second b4 remove " << pair.second;
             pair.second.remove(pos, 1);
             qDebug() << "pair second after remove " << pair.second;
-            QString qUpdateTasks = "UPDATE users SET users.tasks = \'" + pair.second + "\' "
-                                   "WHERE (((users.login)=\'" + pair.first + "\'));";
+            QString qUpdateTasks = "UPDATE users SET tasks = \'" + pair.second + "\' "
+                                   "WHERE login=\'" + pair.first + "\';";
             if (!query.exec(qUpdateTasks))
                 qDebug() << query.lastError().text() << "\n";
         }
-        db.close();
     }
 }
 
@@ -380,14 +365,11 @@ void TasksDialog::on_treeWidget_itemChanged(QTreeWidgetItem *item, int column)
 {
     if (item->parent() != 0 && !oldName.isNull())
     {
-        QString dbDir = QDir::currentPath() + "/db/task.mdb";
-        QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-        db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-        db.setPassword("1234admin56");
-        if (db.open())
+        QSqlDatabase db = QSqlDatabase::database("learnPascal");
+        if (db.isOpen())
         {
-            QString q = "UPDATE table1 SET table1.TaskName = \'" + item->text(0) + "\' "
-                        "WHERE (((table1.TaskName)=\'" + oldName + "\'));";
+            QString q = "UPDATE task SET TaskName = \'" + item->text(0) + "\' "
+                        "WHERE TaskName=\'" + oldName + "\';";
             QSqlQuery query(db);
             if (!query.exec(q))
                 qDebug() << query.lastError().text() << "\n";
@@ -405,6 +387,7 @@ int TasksDialog::numberOfTask(QTreeWidgetItem* item)
                 ++count;
             else
                 return count;
+    return 0;
 }
 
 void TasksDialog::on_editTaskButton_clicked()
@@ -413,9 +396,8 @@ void TasksDialog::on_editTaskButton_clicked()
         return;
     if (ui->treeWidget->currentItem()->parent() != 0)
     {
-        EditTaskDialog etdp;
-        etdp.setTaskName(ui->treeWidget->currentItem()->text(0));
-        etdp.exec();
+        EditTaskDialog etd;
+        etd.setTask(ui->treeWidget->currentItem()->text(0));
+        etd.exec();
     }
-
 }

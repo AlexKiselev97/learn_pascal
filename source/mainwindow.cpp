@@ -10,28 +10,35 @@
 #include "profileform.h"
 #include "tasksdialog.h"
 #include "aboutdialog.h"
-#include <QFile>
 #include <QTextStream>
 #include <QTextCodec>
 #include <QDesktopWidget>
 #include <QTimer>
 #include <QDesktopServices>
-#include <memory>
 
-void MainWindow::taskLoad()
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+    delete ui->mainToolBar;
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::loadTaskTree()
 {
     ui->treeWidget->clear();
-    // загружаем список задач
-    QString dbDir = QDir::currentPath() + "/db/taskTree.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString q = "SELECT * FROM table1;";
+        QString q = "SELECT * FROM taskTree;";
         QSqlQuery query(db);
         if (!query.exec(q))
-            qDebug() << query.lastError().text() << "\n";
+            qDebug() << q << "\n" << query.lastError().text() << "\n";
         else
         {
             int count = 0;
@@ -52,11 +59,11 @@ void MainWindow::taskLoad()
                         if (profile.tasks[count] == QChar('1'))
                             item->setIcon(0, QIcon(":/images/ok-512.png"));
                     QSqlQuery findParent(db);
-                    QString qFindParent = "SELECT table1.[Код], table1.[Название] "
-                                          "FROM table1 "
-                                          "WHERE (((table1.[Код])=" + QString::number(whosChild) + "));";
+                    QString qFindParent = "SELECT Код, Название "
+                                          "FROM taskTree "
+                                          "WHERE Код=" + QString::number(whosChild) + ";";
                     if (!findParent.exec(qFindParent))
-                        qDebug() << findParent.lastError().text() << "\n";
+                        qDebug() << qFindParent << "\n" << findParent.lastError().text() << "\n";
                     else
                     {
                         findParent.next();
@@ -67,26 +74,22 @@ void MainWindow::taskLoad()
                 }
             }
         }
-        db.close();
     }
     else
         qDebug() << db.lastError().text() << "\n";
 }
 
-void MainWindow::updateTaskProfile()
+void MainWindow::loadProfileTasks()
 {
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString q = "SELECT users.tasks "
+        QString q = "SELECT tasks "
                     "FROM users "
-                    "WHERE (((users.login)=\'" + this->profile.name + "\'));";
+                    "WHERE login=\'" + this->profile.name + "\';";
         QSqlQuery query(db);
         if (!query.exec(q))
-            qDebug() << query.lastError().text() << "\n";
+            qDebug() << q << "\n" << query.lastError().text() << "\n";
         else
             if (query.next())
                 profile.tasks = query.value(0).toString();
@@ -109,15 +112,6 @@ bool MainWindow::login()
     return false;
 }
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
-{
-    ui->setupUi(this);
-    delete ui->mainToolBar;
-    init();
-}
-
 void MainWindow::init()
 {
     ui->tabWidget->setCurrentIndex(0);
@@ -126,7 +120,7 @@ void MainWindow::init()
     successLogin = login();
     if (successLogin)
     {
-        taskLoad();
+        loadTaskTree();
         taskLoaded = false;
         ui->tab_task->setEnabled(false);
     }
@@ -134,16 +128,12 @@ void MainWindow::init()
         this->close();
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
-
 void MainWindow::continueCompile(int exitCode, QProcess::ExitStatus exitStatus)
 {
     QTextCodec* cp866 = QTextCodec::codecForName("IBM 866");
     QString programAnswer = cp866->toUnicode(proc->readAllStandardOutput());
     QString programError = cp866->toUnicode(proc->readAllStandardError());
+    proc->close();
     if (exitStatus == QProcess::ExitStatus::CrashExit)
     {
         ui->statusBar->showMessage("Ошибка времени исполнения");
@@ -153,82 +143,84 @@ void MainWindow::continueCompile(int exitCode, QProcess::ExitStatus exitStatus)
     {
         ui->statusBar->showMessage("Ошибка времени исполнения");
         int index = programError.indexOf("sourcePascal.pas:строка") + 24;
-        QString str;
+        QString n;
         while (programError[index] != '\r')
-            str.push_back(programError[index++]);
-        highlightString(str.toInt());
+            n.push_back(programError[index++]);
+        highlightString(n.toInt());
         programError = programError.split("\n").at(1);
     }
     else
         ui->statusBar->showMessage("Программа завершилась успешно");
     ui->outputEdit->setText(programError + programAnswer);
     compileOn = false;
-    proc.reset(nullptr);
+    proc.reset(nullptr); // удаляем процесс
 }
 
 void MainWindow::on_compileButton_clicked()
 {
-    qDebug() << compileOn;
     if (compileOn)
         return;
     compileOn = true;
     ui->statusBar->showMessage("Компиляция...");
     ui->outputEdit->clear();
-    // получаем код программы
-    QString str = ui->programEdit->toPlainText();
-    str.replace("\n", "\r\n");
-    QString saveDir = QDir::currentPath();
+    QString program = ui->programEdit->toPlainText();
+    program.replace("\n", "\r\n");  // новая строка в windows
+    QString backupDir = QDir::currentPath();
     QDir::setCurrent(QDir::currentPath() + "/pascalCompiler");
     QFile source("sourcePascal.pas");
     if (source.open(QIODevice::WriteOnly))
     {
-        // пишем исходник в файл
         QTextStream sourceStream(&source);
-        sourceStream << str;
+        sourceStream << program;
         source.close();
-        // компилируем
-        proc.reset(new QProcess);
-        proc->start("pabcnetcclear.exe", QStringList() << "sourcePascal.pas");
-        proc->waitForFinished();
-        QString compileOutput = proc->readAllStandardOutput();
-        qDebug() << compileOutput;
-        if (compileOutput == "OK\r\n")
-            ui->statusBar->showMessage("Компиляция успешна");
-        else
-        {
-            ui->statusBar->showMessage("Ошибка компиляции");
-            int str = compileOutput.at(compileOutput.indexOf("[")+1).unicode() - '0';
-            highlightString(str);
-            msgBoxSimple("Ошибка компиляции", compileOutput);
-            compileOn = false;
-        }
-        proc->close();
-        if (compileOutput.length() == 4)
-        {
-            ui->statusBar->showMessage("Запуск программы...");
-            // запускаем бинарный файл
-            connect(proc.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-                  this, &this->continueCompile);
-            proc->start("sourcePascal.exe");
-            if (ui->inputEdit->toPlainText().size() > 0)
-            {
-                proc->write((ui->inputEdit->toPlainText().toStdString() + "\n").data());
-                proc->closeWriteChannel();
-            }
-            QTimer::singleShot(10000, proc.get(), &proc->kill);
-        }
     }
-    QDir::setCurrent(saveDir);
+    else
+    {
+        msgBoxSimple("Ошибка", "Не удается сохранить исходный код");
+        QDir::setCurrent(backupDir);
+        return;
+    }
+    // компилируем
+    proc.reset(new QProcess);
+    proc->start("pabcnetcclear.exe", QStringList() << "sourcePascal.pas");
+    proc->waitForFinished();
+    QString compileOutput = proc->readAllStandardOutput();
+    proc->close();
+    if (compileOutput == "OK\r\n")
+    {
+        ui->statusBar->showMessage("Запуск программы...");
+        // запускаем бинарный файл
+        connect(proc.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+              this, &this->continueCompile);
+        proc->start("sourcePascal.exe");
+        if (ui->inputEdit->toPlainText().size() > 0)
+        {
+            proc->write((ui->inputEdit->toPlainText().toStdString() + "\n").data());
+            proc->closeWriteChannel();
+        }
+        QTimer::singleShot(10000, proc.get(), &proc->kill); // ожидание выполнения 10 секунд
+    }
+    else
+    {
+        ui->statusBar->showMessage("Ошибка компиляции");
+        // извлекается номер строки с ошибкой
+        int n = compileOutput.at(compileOutput.indexOf("[")+1).unicode() - '0';
+        highlightString(n);
+        msgBoxSimple("Ошибка компиляции", compileOutput);
+        compileOn = false;
+    }
+    QDir::setCurrent(backupDir);
 }
 
 void MainWindow::continueSubmit(int exitCode, QProcess::ExitStatus exitStatus)
 {
     QTextCodec* cp866 = QTextCodec::codecForName("IBM 866");
-    QString programAnswer = cp866->toUnicode(proc->readAllStandardOutput());
+    QString programOutput = cp866->toUnicode(proc->readAllStandardOutput());
     QString programError = cp866->toUnicode(proc->readAllStandardError());
-    programAnswer.replace("\r\n", R"(\n)");
-    if (programAnswer.endsWith(R"(\n)"))
-        programAnswer.chop(2);
+    proc->close();
+    programOutput.replace("\r\n", "\n");
+    if (programOutput.endsWith("\n"))
+        programOutput.chop(1);
     if (exitStatus == QProcess::ExitStatus::CrashExit)
     {
         ui->statusBar->showMessage("Ошибка времени исполнения");
@@ -237,25 +229,25 @@ void MainWindow::continueSubmit(int exitCode, QProcess::ExitStatus exitStatus)
     else if (!programError.isEmpty())
     {
         ui->statusBar->showMessage("Ошибка времени исполнения");
-        int index = programError.indexOf("sourcePascal.pas:строка") + 24;
-        QString str;
+        int index = programError.indexOf("sourcePascal.pas:строка") + 24; // позиция номера строки с ошибкой
+        QString n;
         while (programError[index] != '\r')
-            str.push_back(programError[index++]);
-        highlightString(str.toInt());
+            n.push_back(programError[index++]);
+        highlightString(n.toInt());
         programError = programError.split("\n").at(1);
     }
     else
     {
         ui->statusBar->showMessage("Программа завершилась успешно");
-        if (programAnswer == task.answer)
+        if (programOutput == task.output)
         {
             this->profile.tasks[this->task.number] = '1';
-            auto childList = ui->treeWidget->findItems(task.taskName, Qt::MatchExactly | Qt::MatchRecursive, 0);
+            auto childList = ui->treeWidget->findItems(task.name, Qt::MatchExactly | Qt::MatchRecursive, 0);
             childList.front()->setIcon(0, QIcon(":/images/ok-512.png"));
             this->profile.tasks = "";
-            for( int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i )
+            for (int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i)
             {
-               QTreeWidgetItem *item = ui->treeWidget->topLevelItem( i );
+               QTreeWidgetItem *item = ui->treeWidget->topLevelItem(i);
                for (int j=0; j < item->childCount(); ++j)
                {
                    if(item->child(j)->icon(0).isNull())
@@ -264,29 +256,28 @@ void MainWindow::continueSubmit(int exitCode, QProcess::ExitStatus exitStatus)
                        this->profile.tasks.push_back('1');
                }
             }
-            QString dbDir = QDir::currentPath() + "/db/users.mdb";
-            QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-            db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-            db.setPassword("1234admin56");
-            if (db.open())
+            QSqlDatabase db = QSqlDatabase::database("learnPascal");
+            if (db.isOpen())
             {
-                QString q = "UPDATE users SET users.tasks = \'" + this->profile.tasks + "\' "
-                            "WHERE (((users.login)=\'" + this->profile.name + "\'));";
+                QString q = "UPDATE users SET tasks = \'" + this->profile.tasks + "\' "
+                            "WHERE login=\'" + this->profile.name + "\';";
                 QSqlQuery query(db);
                 if (!query.exec(q))
-                    qDebug() << query.lastError().text() << "\n";
-                db.close();
+                    qDebug() << q << "\n" << query.lastError().text() << "\n";
             }
             else
                 qDebug() << db.lastError().text() << "\n";
             msgBoxSimple("Результат", "Поздравляем! Вы верно решили задачу.");
         }
         else
+        {
             msgBoxSimple("Результат", "Тестовое задание решено неверно");
+            qDebug() << programOutput << "\n" << task.output;
+        }
     }
     ui->outputEdit->setText(programError);
     compileOn = false;
-    proc.reset(nullptr);
+    proc.reset(nullptr); // удаляем процесс
 }
 
 void MainWindow::on_submitTaskButton_clicked()
@@ -295,46 +286,52 @@ void MainWindow::on_submitTaskButton_clicked()
         return;
     compileOn = true;
     ui->statusBar->showMessage("Компиляция...");
-    QString str = ui->programEdit->toPlainText();
-    str.replace("\n", "\r\n");
-    QString saveDir = QDir::currentPath();
+    QString program = ui->programEdit->toPlainText();
+    program.replace("\n", "\r\n"); // новая строка в windows
+    QString backupDir = QDir::currentPath();
     QDir::setCurrent(QDir::currentPath() + "/pascalCompiler");
     QFile source("sourcePascal.pas");
     if (source.open(QIODevice::WriteOnly))
     {
         QTextStream sourceStream(&source);
-        sourceStream << str;
+        sourceStream << program;
         source.close();
-        proc.reset(new QProcess);
-        proc->start("pabcnetcclear.exe", QStringList() << "sourcePascal.pas");
-        proc->waitForFinished();
-        QString compileOutput = proc->readAllStandardOutput();
-        if (compileOutput == "OK\r\n")
-            ui->statusBar->showMessage("Компиляция успешна");
-        else
-        {
-            ui->statusBar->showMessage("Ошибка компиляции");
-            int str = compileOutput.at(compileOutput.indexOf("[")+1).unicode() - '0';
-            highlightString(str);
-            msgBoxSimple("Ошибка компиляции", compileOutput);
-            compileOn = false;
-        }
-        if (compileOutput.length() == 4)
-        {
-            ui->statusBar->showMessage("Запуск программы...");
-            connect(proc.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-                              this, &this->continueSubmit);
-            proc->start("sourcePascal.exe");
-            if (task.input.size() > 0)
-            {
-                proc->write((task.input.toStdString() + "\n").data());
-                proc->closeWriteChannel();
-            }
-            QTimer::singleShot(10000, proc.get(), &proc->kill);
-
-        }
     }
-    QDir::setCurrent(saveDir);
+    else
+    {
+        msgBoxSimple("Ошибка", "Не удается сохранить исходный код");
+        QDir::setCurrent(backupDir);
+        return;
+    }
+    // компилируем
+    proc.reset(new QProcess);
+    proc->start("pabcnetcclear.exe", QStringList() << "sourcePascal.pas");
+    proc->waitForFinished();
+    QString compileOutput = proc->readAllStandardOutput();
+    proc->close();
+    if (compileOutput == "OK\r\n")
+    {
+        ui->statusBar->showMessage("Запуск программы...");
+        connect(proc.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                          this, &this->continueSubmit);
+        proc->start("sourcePascal.exe");
+        if (task.input.size() > 0)
+        {
+            proc->write((task.input.toStdString() + "\n").data());
+            proc->closeWriteChannel();
+        }
+        QTimer::singleShot(10000, proc.get(), &proc->kill); // ожидание выполнения 10 секунд
+    }
+    else
+    {
+        ui->statusBar->showMessage("Ошибка компиляции");
+        // извлекается номер строки с ошибкой
+        int n = compileOutput.at(compileOutput.indexOf("[")+1).unicode() - '0';
+        highlightString(n);
+        msgBoxSimple("Ошибка компиляции", compileOutput);
+        compileOn = false;
+    }
+    QDir::setCurrent(backupDir);
 }
 
 void MainWindow::on_action_exit_triggered()
@@ -355,59 +352,44 @@ void MainWindow::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int colu
 {
     if (item->parent() != 0)
     {
-        QString dbDir = QDir::currentPath() + "/db/task.mdb";
-        QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-        db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-        db.setPassword("1234admin56");
-        if (db.open())
+        QSqlDatabase db = QSqlDatabase::database("learnPascal");
+        if (db.isOpen())
         {
             QString filename = item->text(column);
-            QString q = "SELECT * FROM table1 WHERE taskName = \'" + filename + "\';";
+            QString q = "SELECT * FROM task WHERE taskName = \'" + filename + "\';";
             QSqlQuery query(db);
             if (!query.exec(q))
-                qDebug() << query.lastError().text() << "\n";
+                qDebug() << q << "\n" << query.lastError().text();
             else
             {
                 if (query.next())
                 {
-                    task.taskName = query.value(0).toString();
+                    task.name = query.value(0).toString();
                     task.input = query.value(1).toString();
-                    task.input.replace("\\n", "\n");
-                    task.answer = query.value(2).toString();
-                    task.htmlTask = query.value(3).toString();
-                    QFile htmlSource(QDir::currentPath() + "/html/" + task.htmlTask);
-                    if (htmlSource.open(QIODevice::ReadOnly))
-                    {
-                        ui->textBrowser->setHtml(htmlSource.readAll());
-                        taskLoaded = true;
-                        ui->tab_task->setEnabled(true);
-                        ui->tabWidget->setCurrentIndex(1);
-                        ui->programEdit->setText("");
-                        ui->inputEdit->setText("");
-                        ui->outputEdit->setText("");
-                    }
+                    task.output = query.value(2).toString();
+                    task.html = query.value(3).toString();
+                    task.html.replace(R"(\')", "'");
+                    ui->textBrowser->setHtml(task.html);
+                    taskLoaded = true;
+                    ui->tab_task->setEnabled(true);
+                    ui->tabWidget->setCurrentIndex(1);
+                    ui->programEdit->setText("");
+                    ui->inputEdit->setText("");
+                    ui->outputEdit->setText("");
                     task.number = -1;
                     int count = 0;
                     for (int i=0; i < ui->treeWidget->topLevelItemCount() && task.number == -1; ++i)
                         for (int j=0; j < ui->treeWidget->topLevelItem(i)->childCount() && task.number == -1; ++j)
-                            if (ui->treeWidget->topLevelItem(i)->child(j)->text(0) == task.taskName)
+                            if (ui->treeWidget->topLevelItem(i)->child(j)->text(0) == task.name)
                                 task.number = count;
                             else
                                 count++;
                 }
             }
-            db.close();
         }
         else
-            qDebug() << db.lastError().text() << "\n";
+            qDebug() << db.lastError().text();
     }
-    else
-        qDebug() << item->text(column) << "tree widget item was clicked\n";
-}
-
-void MainWindow::on_action_profile_triggered()
-{
-
 }
 
 void MainWindow::on_action_openProfile_triggered()
@@ -416,10 +398,20 @@ void MainWindow::on_action_openProfile_triggered()
     form.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
     form.setProfile(this->profile, this->ui->treeWidget);
     form.exec();
-    if (form.getTaskReload())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        this->profile.tasks = form.getNewTaskProfile();
-        taskLoad();
+        QString q = "SELECT tasks FROM users "
+                    "WHERE login= \'" + this->profile.name +"\';";
+        QSqlQuery query(db);
+        if (!query.exec(q))
+            qDebug() << q << "\n" << query.lastError().text();
+        else
+        {
+            query.next();
+            this->profile.tasks = query.value(0).toString();
+            loadTaskTree();
+        }
     }
 }
 
@@ -433,21 +425,20 @@ void MainWindow::on_action_manager_triggered()
     if (profile.administrator)
     {
         TasksDialog manager;
-        manager.setTask(ui->treeWidget);
-        manager.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
+        manager.setTaskTree(ui->treeWidget);
         manager.exec();
-        updateTaskProfile();
-        taskLoad();
+        loadProfileTasks();
+        loadTaskTree();
     }
     else
         msgBoxSimple("Ошибка", "У вас нет прав администратора");
 }
 
-void MainWindow::highlightString(int str)
+void MainWindow::highlightString(int n)
 {
     QTextCursor qtc = QTextCursor(ui->programEdit->document());
     qtc.movePosition(QTextCursor::Start);
-    qtc.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, str-1);
+    qtc.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, n-1);
     qtc.select(QTextCursor::LineUnderCursor);
     QTextCharFormat format;
     format.setBackground(Qt::red);

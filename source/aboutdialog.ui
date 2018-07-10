@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>466</width>
-    <height>498</height>
+    <width>556</width>
+    <height>569</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -44,7 +44,7 @@
       </font>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Learn Pascal&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Версия: 0.2&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Copyright © Александр Киселев&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Лицензия: GPLv3.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Этот продукт основан на Qt.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;https://www.qt.io/&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Справочный материал основан на справке PascalABC.NET&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Learn Pascal&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Версия: 0.3&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Copyright © Александр Киселев&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Лицензия: GPLv3.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Этот продукт основан на Qt.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;https://www.qt.io/&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Справочный материал основан на справке PascalABC.NET&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

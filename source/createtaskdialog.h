@@ -19,7 +19,7 @@ class CreateTaskDialog : public QDialog
 
 public:
     explicit CreateTaskDialog(QWidget *parent = 0);
-    QString getName() { return task.taskName; }
+    QString getName() { return task.name; }
     bool getSuccess() { return success; }
     ~CreateTaskDialog();
 

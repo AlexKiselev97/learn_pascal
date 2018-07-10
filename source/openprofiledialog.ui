@@ -27,7 +27,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="openButton">
      <property name="text">
       <string>Открыть профиль</string>
      </property>

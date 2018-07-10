@@ -20,8 +20,6 @@ class ProfileForm : public QDialog
 public:
     explicit ProfileForm(QWidget *parent = 0);
     void setProfile(const Profile& p, QTreeWidget* twp);
-    QString getNewTaskProfile() { return tasksProfile; }
-    bool getTaskReload() { return taskReload; }
     ~ProfileForm();
 
 protected:
@@ -43,9 +41,8 @@ private:
     Ui::ProfileForm *ui;
     void askSaveProfile();
     QString adminProfileName;
-    QString tasksProfile;
+    QString profileTasks;
     bool profileWasChanged = false;
-    bool taskReload = false;
 };
 
 #endif // PROFILEFORM_H

@@ -19,17 +19,14 @@ EditTaskDialog::~EditTaskDialog()
     delete ui;
 }
 
-void EditTaskDialog::setTaskName(QString name)
+void EditTaskDialog::setTask(QString name)
 {
-    task.taskName = name;
+    task.name = name;
     ui->nameEdit->setText(name);
-    QString dbDir = QDir::currentPath() + "/db/task.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString q = "SELECT * FROM table1 "
+        QString q = "SELECT * FROM task "
                     "WHERE TaskName = \'" + name + "\';";
         QSqlQuery query(db);
         if (!query.exec(q))
@@ -38,43 +35,69 @@ void EditTaskDialog::setTaskName(QString name)
         {
             query.next();
             task.input = query.value(1).toString();
-            task.answer = query.value(2).toString();
-            task.htmlTask = query.value(3).toString();
+            task.output = query.value(2).toString();
+            task.html = query.value(3).toString();
             ui->inputEdit->setText(task.input);
-            ui->outputEdit->setText(task.answer);
-            ui->htmlEdit->setText(task.htmlTask);
+            ui->outputEdit->setText(task.output);
+            ui->htmlEdit->setText("[html файл]");
         }
     }
 }
 
 void EditTaskDialog::on_openButton_clicked()
 {
-    task.htmlTask = QFileDialog::getOpenFileName(this, tr("Открыть HTML"),
-                    QDir::currentPath() + "/html", tr("HTML Files (*.html)"));
-    ui->htmlEdit->setText(task.htmlTask);
-    QStringList list = task.htmlTask.split("/");
-    task.htmlTask = list[list.size()-1];
+    auto filename = QFileDialog::getOpenFileName(this, "Открыть HTML", "C:/", "HTML Files (*.html *htm)");
+    QFile input(filename);
+    if (input.open(QIODevice::ReadOnly))
+    {
+        task.html = input.readAll();
+        task.html.replace("'", R"(\')");
+        ui->htmlEdit->setText(filename);
+    }
+    else
+        msgBoxSimple("Ошибка", "Не удается открыть файл");
 }
 
 void EditTaskDialog::on_saveButton_clicked()
 {
     task.input = ui->inputEdit->toPlainText();
-    task.answer = ui->outputEdit->toPlainText();
-    QString dbDir = QDir::currentPath() + "/db/task.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    task.output = ui->outputEdit->toPlainText();
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString q = "UPDATE table1 SET "
+        QString q = "UPDATE task SET "
                     "TaskName = \'" + ui->nameEdit->text()  + "\', "
-                    "[input] = \'" + task.input + "\', "
-                    "answer = \'" + task.answer + "\', "
-                    "htmlTask = \'" + task.htmlTask + "\' "
-                    "WHERE TaskName = \'" + task.taskName + "\';";
+                    "input = \'" + task.input + "\', "
+                    "answer = \'" + task.output + "\', "
+                    "htmlTask = \'" + task.html + "\' "
+                    "WHERE TaskName = \'" + task.name + "\';";
         QSqlQuery query(db);
-        if (!query.exec(q))
+        if (query.exec(q))
+        {
+            msgBoxSimple("Успех", "Изменения сохранены");
+            this->close();
+        }
+        else
+        {
+            msgBoxSimple("Ошибка", "Не удалось сохранить изменения");
             qDebug() << query.lastError().text() << "\n";
-        db.close();
+        }
+
     }
+}
+
+void EditTaskDialog::on_saveHtmlButton_clicked()
+{
+    auto filename = QFileDialog::getSaveFileName(this, "Сохранить HTML", "C:/", "HTML Files (*.html)");
+    QFile output(filename);
+    if (output.open(QIODevice::WriteOnly))
+    {
+        QTextStream outStream(&output);
+        outStream.setCodec("UTF-8");
+        task.html.replace(R"(\')", "'");
+        outStream << task.html;
+        output.close();
+    }
+    else
+        msgBoxSimple("Ошибка", "Не удается создать файл");
 }

@@ -19,7 +19,7 @@ class SetNewPassDialog : public QDialog
 public:
     explicit SetNewPassDialog(QWidget *parent = 0);
     void setName(const QString& str);
-    bool passChange = false;
+    bool passChanged = false;
     ~SetNewPassDialog();
 
 private slots:

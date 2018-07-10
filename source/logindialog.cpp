@@ -7,6 +7,7 @@
 #include "ui_logindialog.h"
 #include "mainwindow.h"
 #include "header.h"
+#include <QCryptographicHash>
 
 LoginDialog::LoginDialog(QWidget *parent) :
     QDialog(parent),
@@ -22,18 +23,17 @@ LoginDialog::~LoginDialog()
 
 void LoginDialog::on_loginButton_clicked()
 {
-    QString dbDir = QDir::currentPath() + "/db/users.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString q = "SELECT users.[login], users.[password], users.[admin], users.[tasks] FROM users "
-                    "WHERE (((users.[login])= \'" + ui->loginEdit->text() +"\') "
-                    "AND ((users.[password])=\'" + ui->passEdit->text() + "\'));";
+        auto saltyPass = ui->passEdit->text() + ui->loginEdit->text();
+        QString q = "SELECT login, password, admin, tasks FROM users "
+                    "WHERE (login= \'" + ui->loginEdit->text() +"\') "
+                    "AND (password=\'"
+                    + QCryptographicHash::hash(saltyPass.toLocal8Bit(), QCryptographicHash::Algorithm::Sha256).toHex() + "\');";
         QSqlQuery query(db);
         if (!query.exec(q))
-            qDebug() << query.lastError().text() << "\n";
+            qDebug() << query.lastError().text();
         else
         {
             if (query.next())
@@ -49,8 +49,7 @@ void LoginDialog::on_loginButton_clicked()
                 msgBoxSimple("Ошибка", "Неправильный логин или пароль");
             }
         }
-        db.close();
     }
     else
-        qDebug() << db.lastError().text() << "\n";
+        qDebug() << db.lastError().text();
 }

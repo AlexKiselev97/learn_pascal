@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>382</height>
+    <width>469</width>
+    <height>462</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Изменение задачи</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -21,7 +21,11 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QLineEdit" name="nameEdit"/>
+       <widget class="QLineEdit" name="nameEdit">
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Название задачи.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -33,7 +37,11 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <widget class="QTextEdit" name="inputEdit"/>
+       <widget class="QTextEdit" name="inputEdit">
+        <property name="whatsThis">
+         <string>Входные данные в программу для проверки на решение.</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -45,7 +53,11 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_4">
       <item>
-       <widget class="QTextEdit" name="outputEdit"/>
+       <widget class="QTextEdit" name="outputEdit">
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Данные с которыми сверяется ответ программы.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -57,12 +69,29 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QLineEdit" name="htmlEdit"/>
+       <widget class="QLineEdit" name="htmlEdit">
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Путь исходного ресурса.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="openButton">
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Открыть файл ресурса.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="text">
          <string>Открыть</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="saveHtmlButton">
+        <property name="whatsThis">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Извлечь ресурс с сервера.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Сохранить</string>
         </property>
        </widget>
       </item>

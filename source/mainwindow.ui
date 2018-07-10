@@ -422,8 +422,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>751</width>
-             <height>1134</height>
+             <width>747</width>
+             <height>1171</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -653,7 +653,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>776</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -701,19 +701,9 @@ p, li { white-space: pre-wrap; }
     <bool>true</bool>
    </property>
   </widget>
-  <action name="action_settings">
-   <property name="text">
-    <string>Настройки</string>
-   </property>
-  </action>
   <action name="action_exit">
    <property name="text">
     <string>Выход</string>
-   </property>
-  </action>
-  <action name="action_profile">
-   <property name="text">
-    <string>Профиль</string>
    </property>
   </action>
   <action name="action_openProfile">

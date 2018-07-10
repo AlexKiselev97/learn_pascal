@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>382</height>
+    <height>462</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
       <item>
        <widget class="QLineEdit" name="nameEdit">
         <property name="whatsThis">
-         <string>Название задачи</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Название задачи.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>
@@ -69,17 +69,14 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QLineEdit" name="pathEdit">
+       <widget class="QLineEdit" name="htmlEdit">
         <property name="whatsThis">
-         <string>Путь ресурса</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Путь исходного ресурса.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="openHTML">
-        <property name="whatsThis">
-         <string>Ресурс должен лежать в папке /db</string>
-        </property>
         <property name="text">
          <string>Открыть</string>
         </property>
@@ -91,7 +88,7 @@
    <item>
     <widget class="QPushButton" name="createButton">
      <property name="whatsThis">
-      <string>Создать задачу в выбранном разделе</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Создать задачу в выбранном разделе.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
       <string>Создать задачу</string>

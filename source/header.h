@@ -8,9 +8,7 @@
 
 #include <QMainWindow>
 #include <QWidget>
-#include <QSqlQuery>
-#include <QSqlError>
-#include <QSqlRecord>
+#include <QtSql>
 #include <QMessageBox>
 #include <QTreeWidget>
 #include <QDir>
@@ -20,10 +18,10 @@
 struct TaskFromDB
 {
     int number;
-    QString taskName;
+    QString name;
     QString input;
-    QString answer;
-    QString htmlTask;
+    QString output;
+    QString html;
 };
 
 struct Profile

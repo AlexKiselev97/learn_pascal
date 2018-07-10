@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 VERSION = 1.0
 QMAKE_TARGET_COMPANY = Kiselev Corp
 QMAKE_TARGET_PRODUCT = Learn Pascal
-QMAKE_TARGET_DESCRIPTION = description
+QMAKE_TARGET_DESCRIPTION = Application for learning Pascal
 QMAKE_TARGET_COPYRIGHT = Alex Kiselev
 
 TARGET = LearnPascal

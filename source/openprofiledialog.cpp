@@ -23,11 +23,11 @@ OpenProfileDialog::~OpenProfileDialog()
     delete ui;
 }
 
-void OpenProfileDialog::on_pushButton_clicked()
+void OpenProfileDialog::on_openButton_clicked()
 {
     if (ui->listWidget->currentRow() != -1)
     {
         this->profileName = ui->listWidget->currentItem()->text();
-        close();
+        this->close();
     }
 }

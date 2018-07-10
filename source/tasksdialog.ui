@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>514</width>
+    <width>567</width>
     <height>338</height>
    </rect>
   </property>
@@ -86,6 +86,9 @@
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <widget class="QPushButton" name="upItemButton">
+       <property name="whatsThis">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Перемещает на одну позицию вверх выбранный раздел или задачу&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Вверх</string>
        </property>
@@ -93,6 +96,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="downItemButton">
+       <property name="whatsThis">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Перемещает на одну позицию вниз выбранный раздел или задачу&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
         <string>Вниз</string>
        </property>

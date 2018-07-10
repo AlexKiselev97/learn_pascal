@@ -22,54 +22,60 @@ CreateTaskDialog::~CreateTaskDialog()
 
 void CreateTaskDialog::on_openHTML_clicked()
 {
-    task.htmlTask = QFileDialog::getOpenFileName(this, tr("Открыть HTML"),
-                    QDir::currentPath() + "/html", tr("HTML Files (*.html)"));
-    ui->pathEdit->setText(task.htmlTask);
-    auto list = task.htmlTask.split("/");
-    task.htmlTask = list[list.size()-1];
+    auto filename = QFileDialog::getOpenFileName(this, "Открыть HTML", "C:/", "HTML Files (*.html *htm)");
+    QFile input(filename);
+    if (input.open(QIODevice::ReadOnly))
+    {
+        task.html = input.readAll();
+        task.html.replace("'", R"(\')");
+        ui->htmlEdit->setText(filename);
+    }
+    else
+        msgBoxSimple("Ошибка", "Не удается открыть файл");
 }
 
 void CreateTaskDialog::on_createButton_clicked()
 {
     if (ui->nameEdit->text().isEmpty() || ui->inputEdit->toPlainText().isEmpty()
-        || ui->outputEdit->toPlainText().isEmpty() || ui->pathEdit->text().isEmpty())
+        || ui->outputEdit->toPlainText().isEmpty() || ui->htmlEdit->text().isEmpty())
     {
         msgBoxSimple("Ошибка", "Вы должны заполнить все поля");
         return;
     }
-    task.taskName = ui->nameEdit->text();
+    task.name = ui->nameEdit->text();
     task.input = ui->inputEdit->toPlainText();
-    task.answer = ui->outputEdit->toPlainText();
-    QString dbDir = QDir::currentPath() + "/db/task.mdb";
-    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb)};FIL={MS Access};DBQ=" + dbDir);
-    db.setPassword("1234admin56");
-    if (db.open())
+    task.output = ui->outputEdit->toPlainText();
+    QSqlDatabase db = QSqlDatabase::database("learnPascal");
+    if (db.isOpen())
     {
-        QString qCount = "SELECT COUNT(table1.TaskName) "
-                         "FROM table1 "
-                         "WHERE (((table1.TaskName)=\'" + task.taskName + "\'));";
+        QString qCount = "SELECT TaskName "
+                         "FROM task "
+                         "WHERE TaskName=\'" + task.name + "\';";
         QSqlQuery query(db);
         if (!query.exec(qCount))
             qDebug() << query.lastError().text() << "\n";
-        query.next();
-        if (query.value(0).toString() != "0")
+        if (query.size() > 0)
         {
             msgBoxSimple("Ошибка", "Задача с таким именем уже существует");
         }
         else
         {
-            QString qInsert = "INSERT INTO table1 ( TaskName, [input], answer, htmlTask ) "
-                        "VALUES (\'" + task.taskName + "\', "
+            QString qInsert = "INSERT INTO task (TaskName, input, answer, htmlTask) "
+                        "VALUES (\'" + task.name + "\', "
                                 "\'" + task.input + "\', "
-                                "\'" + task.answer + "\', "
-                                "\'" + task.htmlTask + "\');";
-
-            if (!query.exec(qInsert))
-                qDebug() << query.lastError().text() << "\n";
-            success = true;
-            this->close();
+                                "\'" + task.output + "\', "
+                                "\'" + task.html + "\');";
+            if (query.exec(qInsert))
+            {
+                msgBoxSimple("Успех", "Задача создана");
+                success = true;
+                this->close();
+            }
+            else
+            {
+                msgBoxSimple("Ошибка", "Не удалось создать задачу");
+                qDebug() << qInsert << '\n' << query.lastError().text() << "\n";
+            }
         }
-        db.close();
     }
 }
