@@ -14,6 +14,7 @@
 #include <QTextCodec>
 #include <QDesktopWidget>
 #include <QTimer>
+#include <QDebug>
 #include <QDesktopServices>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -191,21 +192,24 @@ void MainWindow::on_compileButton_clicked()
         ui->statusBar->showMessage("Запуск программы...");
         // запускаем бинарный файл
         connect(proc.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-              this, &this->continueCompile);
+              this, &MainWindow::continueCompile);
         proc->start("sourcePascal.exe");
         if (ui->inputEdit->toPlainText().size() > 0)
         {
             proc->write((ui->inputEdit->toPlainText().toStdString() + "\n").data());
             proc->closeWriteChannel();
         }
-        QTimer::singleShot(10000, proc.get(), &proc->kill); // ожидание выполнения 10 секунд
+        QTimer::singleShot(10000, proc.get(), &QProcess::kill); // ожидание выполнения 10 секунд
     }
     else
     {
         ui->statusBar->showMessage("Ошибка компиляции");
         // извлекается номер строки с ошибкой
-        int n = compileOutput.at(compileOutput.indexOf("[")+1).unicode() - '0';
-        highlightString(n);
+        int index = compileOutput.indexOf("[") + 1;
+        QString n;
+        while (compileOutput[index] != ',')
+            n.push_back(compileOutput[index++]);
+        highlightString(n.toInt());
         msgBoxSimple("Ошибка компиляции", compileOutput);
         compileOn = false;
     }
@@ -313,21 +317,24 @@ void MainWindow::on_submitTaskButton_clicked()
     {
         ui->statusBar->showMessage("Запуск программы...");
         connect(proc.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-                          this, &this->continueSubmit);
+                          this, &MainWindow::continueSubmit);
         proc->start("sourcePascal.exe");
         if (task.input.size() > 0)
         {
             proc->write((task.input.toStdString() + "\n").data());
             proc->closeWriteChannel();
         }
-        QTimer::singleShot(10000, proc.get(), &proc->kill); // ожидание выполнения 10 секунд
+        QTimer::singleShot(10000, proc.get(), &QProcess::kill); // ожидание выполнения 10 секунд
     }
     else
     {
         ui->statusBar->showMessage("Ошибка компиляции");
         // извлекается номер строки с ошибкой
-        int n = compileOutput.at(compileOutput.indexOf("[")+1).unicode() - '0';
-        highlightString(n);
+        int index = compileOutput.indexOf("[") + 1;
+        QString n;
+        while (compileOutput[index] != ',')
+            n.push_back(compileOutput[index++]);
+        highlightString(n.toInt());
         msgBoxSimple("Ошибка компиляции", compileOutput);
         compileOn = false;
     }
